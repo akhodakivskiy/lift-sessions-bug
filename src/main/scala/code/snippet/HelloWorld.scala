@@ -11,30 +11,24 @@ import Helpers._
 
 import code.lib._
 
-class UserName {
-  def render = {
-    ExtSession.currentUser match {
-      case Full(user) => "#userName" #> user.name
-      case _ => "*" #> ""
-    }
-  }
+class SessionData {
+  def render =
+    "#sessionVar *" #> ExtSession.currentData &
+    "#cookie *" #> ExtSession.currentCookie
 }
 
-class UserLogin extends StatefulSnippet with Loggable {
+class ChangeForm extends StatefulSnippet with Loggable {
   def dispatch = { case "render" => render }
 
-  private var name = ""
+  private var data = ""
 
   def render = {
     def process() {
-      User.findUser(name) match {
-        case Full(user) => ExtSession.logIn(user)
-        case _ => ExtSession.logOut
-      }
+      ExtSession.setData(data)
       S.redirectTo("/")
     }
 
-    "#inputName" #> SHtml.text(name, name = _) &
+    "#input" #> SHtml.text(data, data = _) &
     "type=submit" #> SHtml.onSubmitUnit(process)
   }
 }

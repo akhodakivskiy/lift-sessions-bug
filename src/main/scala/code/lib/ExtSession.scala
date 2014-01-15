@@ -7,50 +7,26 @@ import net.liftweb.http._
 import net.liftweb.http.provider._
 import net.liftweb.sitemap._
 
-case class User(val name: String)
-
-object User {
-  val UserNames = List("Anton", "Antonio", "Trepi")
-
-  def findUser(name: String): Box[User] = {
-    if (UserNames.contains(name))
-      Full(User(name))
-    else
-      Empty
-  }
-}
-
 object ExtSession extends Loggable {
   val CookieName = "EXT_SESSION_TEST"
 
-  private object _currentUser extends SessionVar[Box[User]](Empty)
+  private object _currentData extends SessionVar[Box[String]](Empty)
 
-  def currentUser = _currentUser.get
+  def currentData: Box[String] = _currentData.get
 
-  def logIn(user: User) {
-    logger.info(user.name)
-    _currentUser(Full(user))
+  def currentCookie: Box[String] = S.findCookie(CookieName).flatMap(_.value)
+
+  def setData(value: String) {
+    _currentData(Full(value))
     S.addCookie(
-      HTTPCookie(CookieName, user.name)
+      HTTPCookie(CookieName, value)
         .setMaxAge((1.days / 1000L).toInt))
-  }
-
-  def logOut = {
-    _currentUser(Empty)
-    S.deleteCookie(CookieName)
   }
 
   def testCookieEarlyInStateful: Box[Req] => Unit = {
     ignoredReq => {
-      (currentUser, S.findCookie(CookieName)) match {
-        case (Empty, Full(c)) => {
-          c.value.map { cookieId =>
-            User.findUser(cookieId) match {
-              case Full(user) => logIn(User("-----------"))
-              case _ => S.deleteCookie(CookieName)
-            }
-          }
-        }
+      (currentData, currentCookie) match {
+        case (Empty, Full(c)) => setData("---Reset by earlyInStateful---")
         case _ =>
       }
     }
